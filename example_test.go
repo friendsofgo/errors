@@ -142,36 +142,6 @@ func ExampleWrap_extended() {
 	//      /home/dfc/src/github.com/friendsofgo/errors/example_test.go:50: outer
 }
 
-func ExampleWrapf() {
-	cause := errors.New("whoops")
-	err := errors.Wrapf(cause, "oh noes #%d", 2)
-	fmt.Println(err)
-
-	// Output: oh noes #2: whoops
-}
-
-func ExampleErrorf_extended() {
-	err := errors.Errorf("whoops: %s", "foo")
-	fmt.Printf("%+v", err)
-
-	// Example output:
-	// whoops: foo
-	// github.com/friendsofgo/errors_test.ExampleErrorf
-	//         /home/dfc/src/github.com/friendsofgo/errors/example_test.go:101
-	// testing.runExample
-	//         /home/dfc/go/src/testing/example.go:114
-	// testing.RunExamples
-	//         /home/dfc/go/src/testing/example.go:38
-	// testing.(*M).Run
-	//         /home/dfc/go/src/testing/testing.go:744
-	// main.main
-	//         /github.com/friendsofgo/errors/_test/_testmain.go:102
-	// runtime.main
-	//         /home/dfc/go/src/runtime/proc.go:183
-	// runtime.goexit
-	//         /home/dfc/go/src/runtime/asm_amd64.s:2059
-}
-
 func Example_stackTrace() {
 	type stackTracer interface {
 		StackTrace() errors.StackTrace
@@ -190,16 +160,4 @@ func Example_stackTrace() {
 	//	/home/dfc/src/github.com/friendsofgo/errors/example_test.go:47
 	// github.com/friendsofgo/errors_test.Example_stackTrace
 	//	/home/dfc/src/github.com/friendsofgo/errors/example_test.go:127
-}
-
-func ExampleCause_printf() {
-	err := errors.Wrap(func() error {
-		return func() error {
-			return errors.Errorf("hello %s", fmt.Sprintf("world"))
-		}()
-	}(), "failed")
-
-	fmt.Printf("%v", err)
-
-	// Output: failed: hello world
 }

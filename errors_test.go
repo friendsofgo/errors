@@ -107,49 +107,6 @@ func TestCause(t *testing.T) {
 	}
 }
 
-func TestWrapfNil(t *testing.T) {
-	got := Wrapf(nil, "no error")
-	if got != nil {
-		t.Errorf("Wrapf(nil, \"no error\"): got %#v, expected nil", got)
-	}
-}
-
-func TestWrapf(t *testing.T) {
-	tests := []struct {
-		err     error
-		message string
-		want    string
-	}{
-		{io.EOF, "read error", "read error: EOF"},
-		{Wrapf(io.EOF, "read error without format specifiers"), "client error", "client error: read error without format specifiers: EOF"},
-		{Wrapf(io.EOF, "read error with %d format specifier", 1), "client error", "client error: read error with 1 format specifier: EOF"},
-	}
-
-	for _, tt := range tests {
-		got := Wrapf(tt.err, tt.message).Error()
-		if got != tt.want {
-			t.Errorf("Wrapf(%v, %q): got: %v, want %v", tt.err, tt.message, got, tt.want)
-		}
-	}
-}
-
-func TestErrorf(t *testing.T) {
-	tests := []struct {
-		err  error
-		want string
-	}{
-		{Errorf("read error without format specifiers"), "read error without format specifiers"},
-		{Errorf("read error with %d format specifier", 1), "read error with 1 format specifier"},
-	}
-
-	for _, tt := range tests {
-		got := tt.err.Error()
-		if got != tt.want {
-			t.Errorf("Errorf(%v): got: %q, want %q", tt.err, got, tt.want)
-		}
-	}
-}
-
 func TestWithStackNil(t *testing.T) {
 	got := WithStack(nil)
 	if got != nil {
@@ -199,32 +156,6 @@ func TestWithMessage(t *testing.T) {
 	}
 }
 
-func TestWithMessagefNil(t *testing.T) {
-	got := WithMessagef(nil, "no error")
-	if got != nil {
-		t.Errorf("WithMessage(nil, \"no error\"): got %#v, expected nil", got)
-	}
-}
-
-func TestWithMessagef(t *testing.T) {
-	tests := []struct {
-		err     error
-		message string
-		want    string
-	}{
-		{io.EOF, "read error", "read error: EOF"},
-		{WithMessagef(io.EOF, "read error without format specifier"), "client error", "client error: read error without format specifier: EOF"},
-		{WithMessagef(io.EOF, "read error with %d format specifier", 1), "client error", "client error: read error with 1 format specifier: EOF"},
-	}
-
-	for _, tt := range tests {
-		got := WithMessagef(tt.err, tt.message).Error()
-		if got != tt.want {
-			t.Errorf("WithMessage(%v, %q): got: %q, want %q", tt.err, tt.message, got, tt.want)
-		}
-	}
-}
-
 // errors.New, etc values are not expected to be compared by value
 // but the change in errors#27 made them incomparable. Assert that
 // various kinds of errors have a functional equality operator, even
@@ -235,9 +166,9 @@ func TestErrorEquality(t *testing.T) {
 		io.EOF,
 		errors.New("EOF"),
 		New("EOF"),
-		Errorf("EOF"),
+		// Errorf("EOF"),
 		Wrap(io.EOF, "EOF"),
-		Wrapf(io.EOF, "EOF%d", 2),
+		// Wrapf(io.EOF, "EOF%d", 2),
 		WithMessage(nil, "whoops"),
 		WithMessage(io.EOF, "whoops"),
 		WithStack(io.EOF),
@@ -269,5 +200,43 @@ func TestAs(t *testing.T) {
 	var tt *myError
 	if !As(wrap, &tt) {
 		t.Errorf("Expected that '%v' error and the '%v' error should be of the same type", err, wrap)
+	}
+}
+
+func TestWithFields(t *testing.T) {
+	tests := []struct {
+		err  error
+		want string
+	}{
+		{New("EOF", Int("a", 1), String("b", "hello")), "EOF"},
+		{WithMessage(New("EOF", Int("a", 1), String("b", "hello")), "yo", Bool("c", true), Float64("d", 1.1)), "yo: EOF"},
+	}
+
+	for _, tt := range tests {
+		got := tt.err.Error()
+		if got != tt.want {
+			t.Errorf("WithFields: got: %v, want %v", got, tt.want)
+		}
+	}
+}
+
+func TestStorytime(t *testing.T) {
+	storytime1 := []field{Int("a", 1), String("b", "hello")}
+	storytime2 := []field{Bool("c", true), Float64("a", 1.1)}
+
+	tests := []struct {
+		err  error
+		want int
+	}{
+		{err: io.EOF, want: 0},
+		{err: New("EOF", storytime1...), want: 2},
+		{err: Wrap(New("EOF", storytime1...), "wrapped", storytime2...), want: 3},
+	}
+
+	for _, tt := range tests {
+		got := len(Storytime(tt.err))
+		if got != tt.want {
+			t.Errorf("Storytime(%v): got: %v, want %v", tt.err, got, tt.want)
+		}
 	}
 }

@@ -27,37 +27,11 @@ func TestFormatNew(t *testing.T) {
 		"%+v",
 		"error\n" +
 			"github.com/friendsofgo/errors.TestFormatNew\n" +
-			"\t.+/github.com/friendsofgo/errors/format_test.go:26",
+			"\t.+/errors/format_test.go:26",
 	}, {
 		New("error"),
 		"%q",
 		`"error"`,
-	}}
-
-	for i, tt := range tests {
-		testFormatRegexp(t, i, tt.error, tt.format, tt.want)
-	}
-}
-
-func TestFormatErrorf(t *testing.T) {
-	tests := []struct {
-		error
-		format string
-		want   string
-	}{{
-		Errorf("%s", "error"),
-		"%s",
-		"error",
-	}, {
-		Errorf("%s", "error"),
-		"%v",
-		"error",
-	}, {
-		Errorf("%s", "error"),
-		"%+v",
-		"error\n" +
-			"github.com/friendsofgo/errors.TestFormatErrorf\n" +
-			"\t.+/github.com/friendsofgo/errors/format_test.go:56",
 	}}
 
 	for i, tt := range tests {
@@ -83,7 +57,7 @@ func TestFormatWrap(t *testing.T) {
 		"%+v",
 		"error\n" +
 			"github.com/friendsofgo/errors.TestFormatWrap\n" +
-			"\t.+/github.com/friendsofgo/errors/format_test.go:82",
+			"\t.+/errors/format_test.go:56",
 	}, {
 		Wrap(io.EOF, "error"),
 		"%s",
@@ -98,59 +72,18 @@ func TestFormatWrap(t *testing.T) {
 		"EOF\n" +
 			"error\n" +
 			"github.com/friendsofgo/errors.TestFormatWrap\n" +
-			"\t.+/github.com/friendsofgo/errors/format_test.go:96",
+			"\t.+/errors/format_test.go:70",
 	}, {
 		Wrap(Wrap(io.EOF, "error1"), "error2"),
 		"%+v",
 		"EOF\n" +
 			"error1\n" +
 			"github.com/friendsofgo/errors.TestFormatWrap\n" +
-			"\t.+/github.com/friendsofgo/errors/format_test.go:103\n",
+			"\t.+/errors/format_test.go:77\n",
 	}, {
 		Wrap(New("error with space"), "context"),
 		"%q",
 		`"context: error with space"`,
-	}}
-
-	for i, tt := range tests {
-		testFormatRegexp(t, i, tt.error, tt.format, tt.want)
-	}
-}
-
-func TestFormatWrapf(t *testing.T) {
-	tests := []struct {
-		error
-		format string
-		want   string
-	}{{
-		Wrapf(io.EOF, "error%d", 2),
-		"%s",
-		"error2: EOF",
-	}, {
-		Wrapf(io.EOF, "error%d", 2),
-		"%v",
-		"error2: EOF",
-	}, {
-		Wrapf(io.EOF, "error%d", 2),
-		"%+v",
-		"EOF\n" +
-			"error2\n" +
-			"github.com/friendsofgo/errors.TestFormatWrapf\n" +
-			"\t.+/github.com/friendsofgo/errors/format_test.go:134",
-	}, {
-		Wrapf(New("error"), "error%d", 2),
-		"%s",
-		"error2: error",
-	}, {
-		Wrapf(New("error"), "error%d", 2),
-		"%v",
-		"error2: error",
-	}, {
-		Wrapf(New("error"), "error%d", 2),
-		"%+v",
-		"error\n" +
-			"github.com/friendsofgo/errors.TestFormatWrapf\n" +
-			"\t.+/github.com/friendsofgo/errors/format_test.go:149",
 	}}
 
 	for i, tt := range tests {
@@ -176,7 +109,7 @@ func TestFormatWithStack(t *testing.T) {
 		"%+v",
 		[]string{"EOF",
 			"github.com/friendsofgo/errors.TestFormatWithStack\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:175"},
+				"\t.+/errors/format_test.go:108"},
 	}, {
 		WithStack(New("error")),
 		"%s",
@@ -190,36 +123,17 @@ func TestFormatWithStack(t *testing.T) {
 		"%+v",
 		[]string{"error",
 			"github.com/friendsofgo/errors.TestFormatWithStack\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:189",
+				"\t.+/errors/format_test.go:122",
 			"github.com/friendsofgo/errors.TestFormatWithStack\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:189"},
+				"\t.+/errors/format_test.go:122"},
 	}, {
 		WithStack(WithStack(io.EOF)),
 		"%+v",
 		[]string{"EOF",
 			"github.com/friendsofgo/errors.TestFormatWithStack\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:197",
+				"\t.+/errors/format_test.go:130",
 			"github.com/friendsofgo/errors.TestFormatWithStack\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:197"},
-	}, {
-		WithStack(WithStack(Wrapf(io.EOF, "message"))),
-		"%+v",
-		[]string{"EOF",
-			"message",
-			"github.com/friendsofgo/errors.TestFormatWithStack\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:205",
-			"github.com/friendsofgo/errors.TestFormatWithStack\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:205",
-			"github.com/friendsofgo/errors.TestFormatWithStack\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:205"},
-	}, {
-		WithStack(Errorf("error%d", 1)),
-		"%+v",
-		[]string{"error1",
-			"github.com/friendsofgo/errors.TestFormatWithStack\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:216",
-			"github.com/friendsofgo/errors.TestFormatWithStack\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:216"},
+				"\t.+/errors/format_test.go:130"},
 	}}
 
 	for i, tt := range tests {
@@ -246,7 +160,7 @@ func TestFormatWithMessage(t *testing.T) {
 		[]string{
 			"error",
 			"github.com/friendsofgo/errors.TestFormatWithMessage\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:244",
+				"\t.+/errors/format_test.go:158",
 			"error2"},
 	}, {
 		WithMessage(io.EOF, "addition1"),
@@ -273,21 +187,14 @@ func TestFormatWithMessage(t *testing.T) {
 		"%+v",
 		[]string{"EOF", "error1", "error2",
 			"github.com/friendsofgo/errors.TestFormatWithMessage\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:272"},
-	}, {
-		WithMessage(Errorf("error%d", 1), "error2"),
-		"%+v",
-		[]string{"error1",
-			"github.com/friendsofgo/errors.TestFormatWithMessage\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:278",
-			"error2"},
+				"\t.+/errors/format_test.go:186"},
 	}, {
 		WithMessage(WithStack(io.EOF), "error"),
 		"%+v",
 		[]string{
 			"EOF",
 			"github.com/friendsofgo/errors.TestFormatWithMessage\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:285",
+				"\t.+/errors/format_test.go:192",
 			"error"},
 	}, {
 		WithMessage(Wrap(WithStack(io.EOF), "inside-error"), "outside-error"),
@@ -295,10 +202,10 @@ func TestFormatWithMessage(t *testing.T) {
 		[]string{
 			"EOF",
 			"github.com/friendsofgo/errors.TestFormatWithMessage\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:293",
+				"\t.+/errors/format_test.go:200",
 			"inside-error",
 			"github.com/friendsofgo/errors.TestFormatWithMessage\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:293",
+				"\t.+/errors/format_test.go:200",
 			"outside-error"},
 	}}
 
@@ -315,11 +222,7 @@ func TestFormatGeneric(t *testing.T) {
 		{New("new-error"), []string{
 			"new-error",
 			"github.com/friendsofgo/errors.TestFormatGeneric\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:315"},
-		}, {Errorf("errorf-error"), []string{
-			"errorf-error",
-			"github.com/friendsofgo/errors.TestFormatGeneric\n" +
-				"\t.+/github.com/friendsofgo/errors/format_test.go:319"},
+				"\t.+/errors/format_test.go:222"},
 		}, {errors.New("errors-new-error"), []string{
 			"errors-new-error"},
 		},
@@ -333,21 +236,14 @@ func TestFormatGeneric(t *testing.T) {
 			func(err error) error { return WithStack(err) },
 			[]string{
 				"github.com/friendsofgo/errors.(func·002|TestFormatGeneric.func2)\n\t" +
-					".+/github.com/friendsofgo/errors/format_test.go:333",
+					".+/errors/format_test.go:236",
 			},
 		}, {
 			func(err error) error { return Wrap(err, "wrap-error") },
 			[]string{
 				"wrap-error",
 				"github.com/friendsofgo/errors.(func·003|TestFormatGeneric.func3)\n\t" +
-					".+/github.com/friendsofgo/errors/format_test.go:339",
-			},
-		}, {
-			func(err error) error { return Wrapf(err, "wrapf-error%d", 1) },
-			[]string{
-				"wrapf-error1",
-				"github.com/friendsofgo/errors.(func·004|TestFormatGeneric.func4)\n\t" +
-					".+/github.com/friendsofgo/errors/format_test.go:346",
+					".+/errors/format_test.go:242",
 			},
 		},
 	}
@@ -374,9 +270,9 @@ func TestFormatWrappedNew(t *testing.T) {
 		"%+v",
 		"error\n" +
 			"github.com/friendsofgo/errors.wrappedNew\n" +
-			"\t.+/github.com/friendsofgo/errors/format_test.go:364\n" +
+			"\t.+/errors/format_test.go:260\n" +
 			"github.com/friendsofgo/errors.TestFormatWrappedNew\n" +
-			"\t.+/github.com/friendsofgo/errors/format_test.go:373",
+			"\t.+/errors/format_test.go:269",
 	}}
 
 	for i, tt := range tests {

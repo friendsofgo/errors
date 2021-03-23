@@ -1,5 +1,3 @@
-// +build go1.13
-
 // Original package created by Dave Cheney
 // Copyright (c) 2015, Dave Cheney <dave@cheney.net>
 //
@@ -123,30 +121,38 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
+	"strings"
 )
+
+func stringify(msg string, fields []field) string {
+	if fields == nil {
+		return msg
+	}
+
+	parts := make([]string, 0, len(fields))
+	for _, field := range fields {
+		parts = append(parts, fmt.Sprintf("%s=%v", field.key, field.value))
+	}
+
+	sort.Strings(parts)
+	return fmt.Sprintf("%s [%s]", msg, strings.Join(parts, " "))
+}
 
 // New returns an error with the supplied message.
 // New also records the stack trace at the point it was called.
-func New(message string) error {
+func New(message string, fields ...field) error {
 	return &fundamental{
-		msg:   message,
-		stack: callers(),
-	}
-}
-
-// Errorf formats according to a format specifier and returns the string
-// as a value that satisfies error.
-// Errorf also records the stack trace at the point it was called.
-func Errorf(format string, args ...interface{}) error {
-	return &fundamental{
-		msg:   fmt.Sprintf(format, args...),
-		stack: callers(),
+		msg:    message,
+		fields: fields,
+		stack:  callers(),
 	}
 }
 
 // fundamental is an error that has a message and a stack, but no caller.
 type fundamental struct {
-	msg string
+	msg    string
+	fields []field
 	*stack
 }
 
@@ -156,36 +162,38 @@ func (f *fundamental) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
-			io.WriteString(s, f.msg)
+			io.WriteString(s, stringify(f.msg, f.fields))
 			f.stack.Format(s, verb)
 			return
 		}
 		fallthrough
 	case 's':
-		io.WriteString(s, f.msg)
+		io.WriteString(s, stringify(f.msg, f.fields))
 	case 'q':
-		fmt.Fprintf(s, "%q", f.msg)
+		fmt.Fprintf(s, "%q", stringify(f.msg, f.fields))
 	}
 }
 
 // WithStack annotates err with a stack trace at the point WithStack was called.
 // If err is nil, WithStack returns nil.
-func WithStack(err error) error {
+func WithStack(err error, fields ...field) error {
 	if err == nil {
 		return nil
 	}
 	return &withStack{
 		err,
+		fields,
 		callers(),
 	}
 }
 
 type withStack struct {
 	error
+	fields []field
 	*stack
 }
 
-func (w *withStack) Cause() error { return w.error }
+func (w *withStack) Cause() error  { return w.error }
 func (w *withStack) Unwrap() error { return w.error }
 
 func (w *withStack) Format(s fmt.State, verb rune) {
@@ -193,21 +201,22 @@ func (w *withStack) Format(s fmt.State, verb rune) {
 	case 'v':
 		if s.Flag('+') {
 			fmt.Fprintf(s, "%+v", w.Cause())
+			io.WriteString(s, stringify("", w.fields))
 			w.stack.Format(s, verb)
 			return
 		}
 		fallthrough
 	case 's':
-		io.WriteString(s, w.Error())
+		io.WriteString(s, stringify(w.Error(), w.fields))
 	case 'q':
-		fmt.Fprintf(s, "%q", w.Error())
+		fmt.Fprintf(s, "%q", stringify(w.Error(), w.fields))
 	}
 }
 
 // Wrap returns an error annotating err with a stack trace
 // at the point Wrap is called, and the supplied message.
 // If err is nil, Wrap returns nil.
-func Wrap(err error, message string) error {
+func Wrap(err error, message string, fields ...field) error {
 	if err == nil {
 		return nil
 	}
@@ -217,23 +226,7 @@ func Wrap(err error, message string) error {
 	}
 	return &withStack{
 		err,
-		callers(),
-	}
-}
-
-// Wrapf returns an error annotating err with a stack trace
-// at the point Wrapf is called, and the format specifier.
-// If err is nil, Wrapf returns nil.
-func Wrapf(err error, format string, args ...interface{}) error {
-	if err == nil {
-		return nil
-	}
-	err = &withMessage{
-		cause: err,
-		msg:   fmt.Sprintf(format, args...),
-	}
-	return &withStack{
-		err,
+		fields,
 		callers(),
 	}
 }
@@ -268,50 +261,43 @@ func As(err error, target interface{}) bool {
 
 // WithMessage annotates err with a new message.
 // If err is nil, WithMessage returns nil.
-func WithMessage(err error, message string) error {
+func WithMessage(err error, message string, fields ...field) error {
 	if err == nil {
 		return nil
 	}
 	return &withMessage{
-		cause: err,
-		msg:   message,
-	}
-}
-
-// WithMessagef annotates err with the format specifier.
-// If err is nil, WithMessagef returns nil.
-func WithMessagef(err error, format string, args ...interface{}) error {
-	if err == nil {
-		return nil
-	}
-	return &withMessage{
-		cause: err,
-		msg:   fmt.Sprintf(format, args...),
+		cause:  err,
+		msg:    message,
+		fields: fields,
 	}
 }
 
 type withMessage struct {
-	cause error
-	msg   string
+	cause  error
+	msg    string
+	fields []field
 }
 
 func (w *withMessage) Error() string { return w.msg + ": " + w.cause.Error() }
 func (w *withMessage) Cause() error  { return w.cause }
 func (w *withMessage) Unwrap() error { return w.cause }
 
-
 func (w *withMessage) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
 			fmt.Fprintf(s, "%+v\n", w.Cause())
-			io.WriteString(s, w.msg)
+			io.WriteString(s, stringify(w.msg, w.fields))
 			return
 		}
 		fallthrough
 	case 's', 'q':
 		io.WriteString(s, w.Error())
 	}
+}
+
+type causer interface {
+	Cause() error
 }
 
 // Cause returns the underlying cause of the error, if possible.
@@ -326,10 +312,6 @@ func (w *withMessage) Format(s fmt.State, verb rune) {
 // be returned. If the error is nil, nil will be returned without further
 // investigation.
 func Cause(err error) error {
-	type causer interface {
-		Cause() error
-	}
-
 	for err != nil {
 		var c causer
 		if !As(err, &c) {
@@ -338,4 +320,46 @@ func Cause(err error) error {
 		err = c.Cause()
 	}
 	return err
+}
+
+func Storytime(err error) []field {
+	storytime := make(map[string]field)
+
+	for err != nil {
+		var fields []field
+		switch v := err.(type) {
+		case *fundamental:
+			fields = v.fields
+		case *withStack:
+			fields = v.fields
+		case *withMessage:
+			fields = v.fields
+		}
+
+		// If the original err is returned, then we're already at the leaf
+		// of the chain, so break the loop.
+		var c causer
+		if As(err, &c) {
+			err = c.Cause()
+		} else {
+			err = nil
+		}
+
+		if fields == nil {
+			continue
+		}
+
+		for _, field := range fields {
+			if _, ok := storytime[field.key]; !ok {
+				storytime[field.key] = field
+			}
+		}
+	}
+
+	var fields []field
+	for _, field := range storytime {
+		fields = append(fields, field)
+	}
+
+	return fields
 }
